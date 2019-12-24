@@ -1,0 +1,27 @@
+Q1. This patch actually improves the performance of the ls command.  looking at
+   the diff file that was used to patch ls, we can see that an if statement was
+   removed to fix the bug, slightly improving the perfomance of ls because the
+   machine no longer has to check this condition.    
+
+Q2. Since I only applied the patch for the ls bug and not any other changes it
+   is unlikely for the new version of coreutils to introduce new problems in the
+   future.  The one possibility for problems is exactly how the ls bug was 
+   originally introduced into coreutils.  The ls bug did not exist until 
+   changes came with POSIX.1-2008.  If this specification changes once again ls
+   may not function properly accoriding to POSIX. 
+	
+Q3. `python randline.py /dev/null` gives the error:
+   IndexError: list index out of range
+   It gives this error because even though the file is empty, randline.pu still
+   attempts to search for a line where none exists and when it tries to operate
+   on a line where in reality there is no line, the behavior is undefined.
+Q4. `python3 randline.py
+     File "randline.py", line 65
+    except IOError as (errno, strerror):
+                      ^
+SyntaxError: invalid syntax
+   the syntax changed from python2 to python3 which causes this error.
+   the specific change is that in python3, IOError was marged into OSError so
+   the IOError in this code needs to change to align with python3 syntax. The 
+   change would be changing the previous section to 
+except OSError as err: 

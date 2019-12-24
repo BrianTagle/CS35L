@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# removes html stuff before the table
+sed '/<!DOCTYPE/,/<\/font><\/td>/ s/.*//' |
+
+# removes html stuff after the table
+sed '/<\/table>/,/<\/html>/ s/.*//' |
+
+# remove english words
+sed '/<tr>/,/<\/td>/ s/.*//' |
+
+# translate all upper case letters to lower case
+tr 'A-Z' 'a-z' |
+
+# delete commas
+sed 's/\,//g' |
+
+# replace ` with '
+sed s/\`/\'/g |
+
+# delete html stuff
+sed 's/<[^>]*>//g' |
+
+# replace space with new line to seperate words on same line
+sed 's/ /\n/g' |
+
+# removes misspelled haiwaiin
+tr -cs "pk\'mnwlhaeiou" '[\n*]' |
+
+# sorts haiwaiin words dictionary and -u removes duplicates
+sort -u |
+
+# remove empty lines in the dictionary
+sed '/^$/d'

@@ -1,0 +1,12 @@
+1. Even if other teams had been observing bytes going across the network the network should still be secure because they would only be observing the bytes encrypted by the public key and 
+would not be able to decrypt those bytes without the private key. The network is secure.
+  1) The network is not secure.  If attackers had access to our keystrokes they could discover the passphrase to the key we generated and then could use our passphrase to access the private 
+  key.  If the attacker then got access to our server they could acquire the private key and decrypt the encrypted files.
+  2) The network would not be secure if attackers controlled the USB.  They could easily access the .ssh file on the server and acquire the public and private keys.  Using these keys they 
+  could decrypt all messages on the network.
+
+2. gpg --verify doesnt verify that you personally create the file in question.  Somene could intercept the file and tamper with it and then create a new detatched signature and then GPG will
+only confirm that the the file and the signature match and does not help with determining the original source of the file.
+
+To fix this problem I could post my public key to some third party so they can track changes to the key so they can ensure the key has not been changed and the reciever of a file has the
+right key to verify the file.

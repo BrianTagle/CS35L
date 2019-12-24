@@ -1,0 +1,66 @@
+1) export PATH=/usr/local/cs/bin:$PATH
+sort --version
+this ensures that we are using a version of sort that can use multiple threads
+
+2) Next we must generate file containing 2^24 random single precision floating point numbers using od
+man ta
+to discover the options to use with man to get the correct amount of single precision floating point numbers.
+-t fF, selects floats
+-N BYTES, will be useful for getting 2^24 random single precision floating numbers, a single precision float is 4 bytes
+-An, removes the addressing before our floating point values, as they are not relevant to us
+
+running od with the previous commands and with /dev/urandom/ as input gives us 4 floating point values per line when we only want one so we can use tr on our file to fix the format
+tr -s ' ' '\n'
+this will squeeze down repeat whitespace to a single space and then replace them with newlines, this should correct the format
+
+There is one remaining problem with our file, there is a newline at the start of the file so used sed to delete empty lines
+sed '/^$/d'
+this sed command deletes lines that are empty since ^ denotes the start of a line and $ denotes the end of a line.
+
+the final command is
+od -An -t fF -N "$result" < /dev/urandom |tr -s ' ' '\n' | sed '/^$/d' > randfloats.txt
+the variable "result" is a bit pattern of all zeroes right shifted by 24 which equals 2 to the power of 24.  Then this value is multipled by 4 because each floating point number takes up
+4 bytes.  Finally result is fed into the command above.
+where we output the result to a file named randfloats.txt
+
+Then we need to run several sort commands on our data set of randfloats.txt and time them
+time sort -g randfloats.txt > /dev/null
+this compares our floats numerically and times it.  The output is sent to /dev/null because we don't care about the output, we only want to see how long sort takes.
+
+Then we time the sort command 4 more times using the -g and --parallel options with 1, 2, 4, and 8 threads.
+time sort -g --parallel 1 randfloats.txt > /dev/null
+time sort -g --parallel 2 randfloats.txt > /dev/null
+time sort -g --parallel 4 randfloats.txt > /dev/null
+time sort -g --parallel 8 randfloats.txt > /dev/null
+
+I put the calculation for the number of bytes required for 2^24 floats, the commands to generate randfloats and format it, and the 5 sorting commands into a shell script.
+Running this shell script gives me the following time outputs for the 5 sorting commands.
+
+Time result of sort -g
+real    0m37.710s
+user    3m22.149s
+sys     0m3.171s
+Time result of sort -g --parallel 1
+real    3m2.825s
+user    3m1.716s
+sys     0m1.098s
+Time result of sort -g --parallel 2
+real    1m39.362s
+user    3m6.815s
+sys     0m2.274s
+Time result of sort -g --parallel 4
+real    0m59.664s
+user    3m14.715s
+sys     0m2.708s
+Time result of sort -g --parallel 8
+real    0m38.689s
+user    3m22.822s
+sys     0m3.131s
+
+Interestingly sort -g with parallel 8 and without parallel 8 take the same time to sort the file.  The only explanation that could explain this is that the sort command automatically 
+uses 8 parallel threads when no parallel option is given.  
+Other than that the shown results are expected and sort is increasily faster the more threads that are allocated to do the sorting.  This is reflected in the decreasing real time
+the sort command takes with more parallel threads.  
+The user time does not decrease because this represents the amount of time the sort commands spends in the CPU which is split between
+threads.  So in parallel 1, there is only one thread that takes up all user time but in parallel 8 each thread ideally takes up 1/8 of the total user time. 
+

@@ -1,0 +1,26 @@
+#!/bin/bash
+#iterate through any number of arguements(files and directories only)
+for ARG in "$@" 
+do
+    #ARG is a directory, meaning we need to look at its files and subdirectores
+    if [[ -d $ARG ]]; then 
+	#go through the list of files and check their format
+	OIFS="$IFS"
+	IFS=$'\n'
+	find $ARG -type f -print0 | while IFS= read -r -d '' FILE; 
+	do
+	    #contains non-ASCII bytes
+            if grep -q -- [$'\x80'-$'\xFF'] "$FILE"; then 
+	        echo "$FILE is an UTF-8 file"
+	    fi
+	done
+	IFS="$OIFS"
+	#ARG is a file, check the file for its format (ascii or utf-8)
+    elif [[ -f $ARG ]]; then
+	#contains non-ASCII bytes
+	if grep -q -- [$'\x80'-$'\xFF'] "$ARG"; then 
+	    echo "$ARG is a UTF-8 file"
+	fi
+    fi
+done
+

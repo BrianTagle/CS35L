@@ -1,0 +1,125 @@
+   Verify that the bug still exists before prepending anything to my path.
+   `ls -Aa`
+   `ls -aA`
+   both of these commands output the directories . and .. when the command with
+   options -aA should not because A should overide a.  
+
+1. Navigate to the directory I am using for this lab
+   `cd CS35L/assign3/`
+   I retrieved the Coreutils tar file from the assignment page with
+   `wget ftp://ftp.gnu.org/gnu/coreutils/coreutils-8.29.tar.xz`
+
+   then I check the check the signature of this command with the GNU keyring
+   first acquire both the signature and the gnu-keyring with the commands 
+   `wget ftp://ftp.gnu.org/gnu/coreutils/coreutils-8.29.tar.xz.sig`
+   `wget gpg --verify --keyring ./gnu-keyring.gpg coreutils-8.29.tar.xz.sig`
+
+   then checking the signature with
+   `gpg --verify --keyring ./gnu-keyring.gpg coreutils-8.29.tar.xz.sig`
+   
+   This command verifies that the signature if valid but warns that it is not
+   certified with a trusted signature, so anyone could have made this signature
+
+2. Extract the source files from the compressed tarball
+   `tar xf coreutils-8.29.tar.xz`
+   this creates a directory named coreutils-8.29 in my current directory
+
+   in the new directory coreutils-8.29 there is a file named INSTALL that
+   explains how to install coreutils into a temporary directory.
+   run these commands in the folliwng order 
+   `./configure --prefix=/u/eng/ugrad/tagle/CS35L/assign3/coreutilsInstall`
+   `make`
+   `make install`
+   to compile install the package to the specified path
+
+3. I recreated the bug in the coreutilsInstall by comparing the output of
+   `ls -aA` and `./coreutilsInstall/bin/ls -aA`
+   (ls is the command in the prefix /usr/local/cs/bin and 
+   ./coreutilsInstall/bin/ls is the command in the coreutilsInstall directory.)
+  
+   Just as the bug described, the coreutils ls -aA command output the . and .. 
+   directories while the /usr/local/cs/bin ls -aA did not output them.
+
+4. Install the patch
+   Copy the the portion of the patch relating to ls which is 
+diff --git a/src/ls.c b/src/ls.c
+index c89a22f68..bae2c1104 100644
+--- a/src/ls.c
++++ b/src/ls.c
+@@ -1903,8 +1903,7 @@ decode_switches (int argc, char **argv)
+           break;
+ 
+         case 'A':
+-          if (ignore_mode == IGNORE_DEFAULT)
+-            ignore_mode = IGNORE_DOT_AND_DOTDOT;
++          ignore_mode = IGNORE_DOT_AND_DOTDOT;
+           break;
+ 
+         case 'B':
+   copy this into a file in the coreutils-8.29 direcotry
+   `cd coreutils-8.29`
+   `touch patchfile` 
+    (copy the diff text above into patchfile)
+   `patch -p1 < pathfile`
+
+   the output is
+patching file src/ls.c
+Hunk #1 succeeded at 1900 (offset -3 lines).
+   which means the patch was applied successfully
+
+5. finalize the patch by running the command
+   `make`
+    this will apply the patch to /src/ls.c in the coreutils-8.29 directory
+    output of `make`:
+make  all-recursive
+make[1]: Entering directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils
+-8.29'
+Making all in po
+make[2]: Entering directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils
+-8.29/po'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils-
+8.29/po'
+Making all in .
+make[2]: Entering directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils
+-8.29'
+  CC       src/ls.o
+  CCLD     src/dir
+  CCLD     src/ls
+  CCLD     src/vdir
+  GEN      man/dir.1
+  GEN      man/ls.1
+  GEN      man/vdir.1
+make[2]: Leaving directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils-
+8.29'
+Making all in gnulib-tests
+make[2]: Entering directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils
+-8.29/gnulib-tests'
+make  all-recursive
+make[3]: Entering directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils
+-8.29/gnulib-tests'
+Making all in .
+make[4]: Entering directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils
+-8.29/gnulib-tests'
+make[4]: Nothing to be done for 'all-am'.
+make[4]: Leaving directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils-
+8.29/gnulib-tests'
+make[3]: Leaving directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils-
+8.29/gnulib-tests'
+make[2]: Leaving directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils-
+8.29/gnulib-tests'
+make[1]: Leaving directory '/w/home.07/eng/ugrad/tagle/CS35L/assign3/coreutils-
+8.29'
+    
+   Analyzing the output, you can see the function of the make command as it 
+   looks in several subdirectories of coreutils-8.29 for changes to make.  
+   however there are no changes needed in many directories such as /po and
+   /gnulin-tests so the make command enters and leaves these directories
+   quickly.  The only changes needed are in /src/ls which is where the make 
+   command makes changes.
+
+6. test that the patch worked by using the ls command in coreutils-8.29
+   compare ls -aA to ./src/ls -aA and compare ls -Aa to ./src/ls -Aa
+
+   the patch was successful! ./src/ls now has option A overide previous a and 
+   vice versa.  ./src/ls -aA doesnt list ., .. while ./src/ls does list them.

@@ -1,0 +1,208 @@
+1) I first looked up how to make the main function in C take arguments as previously I had only made main functions with zero arguments.  
+
+The way to do this is
+int main(int argc, char** argv);
+argc is the argument count and tells you how many arguements are given so the command: ./program arg1 arg2, has 3 arguments, the name of the program and arg1/arg2
+argv is a pointer array to the arguments.
+
+The first program we had to create is tr2b.c
+we have to check several cases that will cause the program to report an error and exit early
+
+The first condition is if there are more arguments present than "from" and "to"
+we can check if argc = 3, since only passing in two arguments means argc = 3 because the name of the program is also counted as an argument.
+
+The second condition to check is to make sure that arguments "from" and "to" are byte strings of the same length.  
+to do this we can pass from and to as arguments to the function strlen() and compare the two returned sizes.  If they are not equal we can exit the program.
+
+The third condition is if there are repeated bytes in the "from" argument
+To do this we can create two for loops, one nested within the other.  The first loop selects the first byte from the "from" argument incrementing to the next byte on every iteration. The 
+second for loop selects the first element of the "from" argument that follows the element chosen in the first for loop. Then the second for loop iterates to the next byte until the end of 
+the string.  Using these for loops we can compare every element of the "from" argument to every element other element in the argument.  If any of the values are equal to each other, then
+we have an error and can exit the problem.
+
+Now that we have verified that the arguments passed in are valid we can move on to the meat of this program.
+We read input from stdin with the function getchar() and while the character we get is not the EOF character we continue with our loop
+We check the current character recieved from getchar to see if the argument "from" has the same character in it, if it does have the same character, then we set the current character to be
+the character in the "to" argument that has the same index as the character from "from". After this we use putchar() to put our byte to the stdout stream.
+
+Continue the above process until we reach the EOF.
+
+2)Next we have to create the tr2u.c program.  This program has all the same checking that tr2b.c does on the arguments but things change in the bulk of the program where we have to get
+characters and write them to stdout.  Specifically we will no longer use getchar() and putchar() but instead will use read() and write() (remember to include the new library unistd.h)
+
+The logic of our program remains so I use the cp command to copy tr2b.c and save it as tr2u.c.
+
+In order to use read() we need to create a char buffer of size one to store what we read (this is the Argument 2 of read).  Argument 1 of read is 0 because we don't want to offset
+any bytes from the start of the file.  Argument 3 of read is 1 which is how many bytes we want to read.
+Now we have the character we read stored in a buffer that we can use to compare to from and to using the same logic as tr2b.c
+
+When we are ready to print out the character we use write().  The second argument of write tells write to print our buffer we create and the third argument tells write to print one byte
+
+5) I need to compare the amount of system calls issued by my programs tr2b.c and tr2u.c with the strace command when operating on a file of 5 million bytes.
+
+In order to create the large 5 million byte file I used a code snippet taken from the class piazza (@417)
+#include <stdlib.h>
+#include <unistd.h>
+
+int main() {
+    char c;
+    for (int i = 0; i < 5000000; i++) {
+        c = rand()% (127 - 32) + 32;
+        write(1, &c, 1);
+    }
+}
+this code outputs 5 million random ASCII characters.  I piped this output into a file to store them so I wouldn't have to use the c code again.
+
+a)tr2b/tr2u system calls when copying one file to another.  I can to do with the following commands:
+strace -c ./tr2b 'abc' 'xyz' < 5milBytes > tr2b_output
+strace -c ./tr2u 'abc' 'xyz' < 5milBytes > tr2u_output
+(the -c option for strace outputs useful information which includes the amount of system calls, how many times they were called and the time it took to call them)
+tr2b.c used a total of 1250 system calls with 611 write system calls and 613 read system calls (other system calls our miscellaneous syscalls, not worthy of noting_
+tr2u.c used a total of 10000024 system calls with 5000000 write system calls and 5000002 read system calls
+
+tr2u.c used 8000% more system calls than tr2b.c and this was very noticeable when I run the strace commands as tr2b finished instanteously while I had to sit and wait for tr2u to finish.
+ 
+b) tr2b/tr2u system calls when copying a file to the terminal.  Done with the following commands:
+strace -c ./tr2b 'abc' 'xyz' < 5milBytes
+strace -c ./tr2u 'abc' 'xyz' < 5milBytes
+
+tr2b.c used a total of 5522 system calls with 4883 write system calls and 613 read system calls
+tr2u.c used a total of 10000024 system calls with 5000000 write system calls and 5000002 read system calls
+
+comparing tr2b.c from parts a and b, this program performs very quickly for both copying a file to another file and copying it to the terminal.  The only difference in their performance is
+that copying to terminal makes tr2b call write an additional 4272 times.  This is most likely due to writing out the contents of the output to the terminal.
+
+comparing tr2u.c from parts a and b, this program performs an enourmous amount of system calls no matter what it is doing.  An interesting thing to note is that it performs the same amount
+of read/write calls no matter whether it is copying to a file or copying to the terminal.  It seems this program doesn't care in terms of performance whether it write to a file or terminal
+but it still runs very slowly compared to tr2b.c
+
+Overall tr2b.c is much more efficient than tr2u.c in terms of system calls because it performs the same operations with less system calls.
+
+4) Compare the time performance of tr2b.c/tr2u.c with the time command.  Use the following commands:
+a)copying one file to another
+time ./tr2b 'abc' 'xyz' < 5milBytes > tr2b_outputTime
+time ./tr2u 'abc' 'xyz' < 5milBytes > tr2u_outputTime
+
+tr2b.c time:
+real    0m0.199s
+user    0m0.121s
+sys     0m0.008s
+
+tr2u.c time:
+real    0m12.134s
+user    0m1.549s
+sys     0m10.505s
+
+comparing tr2u.c/tr2u.b for copying one file to another, tr2b is signifcantly faster than  tr2u, where tr2b is 60x faster in real time.
+
+b)copying a file to the terminal
+time ./tr2b 'abc' 'xyz' < 5milBytes 
+time ./tr2u 'abc' 'xyz' < 5milBytes 
+
+tr2b.c time:
+real    0m0.827s
+user    0m0.167s
+sys     0m0.045s
+
+tr2u.c time:
+real    0m9.979s
+user    0m1.281s
+sys     0m8.688s
+
+comparing tr2b.c/tr2u.c for copying a file to the terminal, once again tr2b is much faster than tr2u. tr2u performs better compared to tr2u in part a, although tr2u's 
+performance is still very bad.
+
+In both cases tr2b.c runs faster because it takes less real time to complete the program.
+
+With the tests we have run with strace and time we can conclude that the buffered version of the program tr2b.c performs better than the unbuffed version tr2u.c
+This is confirmation of what we learned in class.  We learned that using library functions is better than making system calls yourself because making system calls yourself will almost
+undoubtedly end up with the program making more system calls than a library function.  Using system calls is very pricey because of the amount of time they take, so you want to minimize the
+amount of system calls and clearly the best way to do that is to use library functions
+
+Time comparisons for homework solutions
+
+time ./sfrobu 
+time ./../assign4/sfrob
+I used input files ranging from 100 lines to 1,000,000 lines
+each line had 10 random ascii characters on it
+
+sfrobu performance 
+100 lines:
+real    0m0.003s
+user    0m0.000s
+sys     0m0.003s
+1,000 lines:
+real    0m0.015s
+user    0m0.000s
+sys     0m0.014s
+10,000 lines:
+real    0m0.129s
+user    0m0.018s
+sys     0m0.109s
+100,000 lines:
+real    0m1.261s
+user    0m0.190s
+sys     0m1.059s
+1,000,000 lines:
+real    0m12.364s
+user    0m1.995s
+sys     0m10.265s
+
+sfrob performance
+100 lines:
+real    0m0.002s
+user    0m0.000s
+sys     0m0.001s
+1,000 lines:
+real    0m0.012s
+user    0m0.001s
+sys     0m0.003s
+10,000 lines:
+real    0m0.044s
+user    0m0.009s
+sys     0m0.020s
+100,000 lines:
+real    0m0.524s
+user    0m0.101s
+sys     0m0.149s
+1,000,000 lines:
+real    0m5.747s
+user    0m1.007s
+sys     0m1.376s
+
+It is obvious that sfrob is much faster than sfrobu from the data and also because sfrobu uses many system calls which have a high overhead.
+The number of comparisons made with qsort is linear to the amount of lines in the file
+18.787x -133288, where x is the number of lines
+
+Now Im going to compare sfrob, sfrobu, sfrobu -f, sfrobs, sfrobs -f using the time command on the million line file
+
+sfrob:
+real    0m5.517s
+user    0m0.996s
+sys     0m1.428s
+
+sfrobu
+real    0m12.634s
+user    0m1.956s
+sys     0m10.581s
+
+sfrobu -f 
+real    0m13.299s
+user    0m1.987s
+sys     0m11.222s
+
+sfrobs
+real    0m5.031s
+user    0m0.537s
+sys     0m0.663s
+
+sfrobs -f
+real    0m5.485s
+user    0m0.998s
+sys     0m0.700s
+
+clearly the shell script is the fastest out of the programs.  Obviously it is faster than the unbuffered program sfrobu because of how costly system calls are.  It is also faster than
+sfrob probably because the script uses the linux commands tr and sort that have been refined over a number of years for their effeciency.
+
+The takeaway is that there are many ways to do one thing and you have to be careful about how you go about it or you could end up hogging up the computer's time by doing
+costly commands when there are much better commands like the linux commands we used in the shell script or the library commands in sfrob that can help you make better code.

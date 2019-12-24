@@ -1,0 +1,108 @@
+1) Get a copy of the Diffutils repository in Git format
+`git clone https://git.savannah.gnu.org/git/diffutils.git`
+
+2) Enter the newly created directory diffutils and run the command
+`git log > ../git-log.txt`
+This gives us a log of changes to Diffutils' master branch
+
+3) Generate a list of tags used for Diffutils using the following command in the diffutils directory
+`git tag > ../git-tags.txt`
+
+4) Find the commit with text "maint: quote 'like this' or "like this", not `like this'"
+Open git-log.txt with emacs
+use keystrokes C-s to word search for "quote 'like this'"
+The relevant commit has ID: commit 62ca21c8c1a5aa3488589dcb191a4ef04ae9ed4f
+Go back to the terminal and generate a patch with the command
+`git show 62ca21c8c1a5aa3488589dcb191a4ef04ae9ed4f > quote-patch.txt`
+
+5) Checkout version 3.0 of Diffutils with the command
+`git checkout v3.0`
+
+6) Attempt apply the patch by running the command:
+`patch p1 < quote-patch.txt`
+The patch ran into some problems because It couldn't find certain files it was told to patch.
+Files patch failed to find: doc/diffutils.texi, HACKING, and man/help2man, along with several other hunks that were saved in .c.rej files.
+
+7) Use `git status` to get an overview of what happened
+relevant output:
+	modified:   NEWS
+        modified:   README
+        modified:   TODO
+        modified:   doc/diagmeet.note
+        modified:   ms/config.bat
+        modified:   ms/config.site
+        modified:   po/en.po
+        modified:   src/analyze.c
+        modified:   src/cmp.c
+        modified:   src/context.c
+        modified:   src/diff.c
+        modified:   src/diff.h
+        modified:   src/diff3.c
+        modified:   src/dir.c
+        modified:   src/ifdef.c
+        modified:   src/io.c
+        modified:   src/sdiff.c
+        modified:   src/side.c
+        modified:   src/system.h
+        modified:   src/util.c
+        modified:   tests/help-version
+
+8) Investigate the emacs commands (C-x v =), (C-x v u), (C-h m), (C-c C-a), and (C-c C-c) and learn their functions and how to use them.
+
+9) Open the modified files from #7 that are not .c files using emacs and execute emancs command C-x v u to revert changes in these files followed by yes to confirm reverting changes.
+Reverted Changes Files : NEWS, README, TODO, doc/diagmeet.note, ms/config.bat, ms/config.site, po/en.po, diff.h, system.h, tests/help-version
+
+For .c files we only want to undo changes that dont relate to character string constants
+`emacs /src/*.c`
+`C-x v =` (open *vc-diff*)
+Navigate *vc-diff* and use C-c C-c to investigate the different changes in the source code
+If the change is not a constant character string constant revert the change with C-u C-c C-a while in the *vc-diff* buffer
+
+10) `ls src/*.c.rej` to list all files that were rejected by the patch and investigate them to find any missing changes in the .c files.
+The files that needed changes were diff.c and diff3.c.  These files were rejected by the patch because their lines numbers were incorrect.
+I fixed these files by using emacs to copy (A-w) from the .c.rej file and pasting (C-y) to the .c file after finding the correct line number.
+
+11) Remove untracked files from git status
+`git clean -f`
+
+12) Check git status to confirm there are 6 files.
+`git status`
+        modified:   src/cmp.c
+        modified:   src/diff.c
+        modified:   src/diff3.c
+        modified:   src/dir.c
+        modified:   src/sdiff.c
+        modified:   src/util.c
+So there are 6 files.
+`git diff > quote-3.0-patch.txt` (generates a new patch for diffutils v3)
+`wc -l` (outputs 321 lines which is within the 300-400 line range the spec states git diff should be)
+
+13) Since I am working on lnxsrv09 I need to download a patch before I build Diffutils
+`wget https://web.cs.ucla.edu/classes/winter19/cs35L/assign/diffutils-gets.diff`
+Now that I have the patch I run the commands for README-hacking along with the downloaded patch after ./bootstrap
+`./boostrap`
+`patch p0 < diffutils-gets.diff`
+`./configure`
+`make`
+`make check`
+
+Run the commands that previously had erroneus output to check if they have been fixed.
+`diff . -` 
+`diff --help`
+Neither of these commands have the grave accent ` in their output and now contain ' instead which is the correct behavior.
+
+14)Copy the source code of the patched v3.0 we create as well as the original v3.0.  Then we generate a file quote-3.0-test.txt with our implementation of diff that shows the differences
+between the patched and unpatched v3.0 versions.
+`cp -r src ../diffutils-3.0-patch/`
+(remove files that arent c files from the diffutils-3.0-patch directory)
+`cd ..`
+`git clone https://git.savannah.gnu.org/git/diffutils.git diffutils-original`
+`cd diffutils-original`
+`git checkout v3.0`
+`cp -r src ../diffutils-3.0/`
+`cd ..`
+`diffutils/src/diff -pru diffutils-3.0 diffutils-3.0-patch >quote-3.0-test.txt`
+
+15) Check to see if the quote-3.0-test.txt and quote-3.0-patch.txt files have any differences.
+`diff quote-3.0-test.txt quote-3.0-patch.txt > quote.diff`
+It turns out these files do have a lot of differences but these differences are innocuous are they mostly relate to different file paths.  

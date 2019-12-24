@@ -1,0 +1,173 @@
+I checked my locale with the locale command and LC_CTYPE != "C" so I used the 
+provided command "export LC_ALL='C'" to fix the locale. 
+Using the locale command again I checked to make sure LC_CTYPE="C"
+
+I navigated to the directory with words in it and set it to the current 
+directory with the following command
+cd /usr/share/dict
+Then I sorted the words file and created an output file in my working directory
+for the sorted words file
+sort words -o ~/CS35L/assign2/words
+
+Next we also get the html from the assignment page and put it in our working 
+directory
+wget https://web.cs.ucla.edu/classes/winter19/cs35L/assign/assign2.html
+This creates a file named assign2.html in our directory that contains the html
+from the site.
+sed -i 's/<[^>]*>//g' assign2.html
+to remove the html from the file permanently.
+
+Next we run some commands on the file assign2.html
+
+tr -c 'A-Za-z' '[\n*]' < assign2.html
+This prints out every word with characters a-z or A-Z.  However this prints a 
+newline for every word that contain other characters so there is a lot of blank
+space and it is not easily human readable
+
+tr -cs 'A-Za-z' '[\n*]' < assign2.html
+This performs the same function as the previous command, printing our words 
+with characters a-z through A-Z with one difference. the added -s on the tr 
+command removes repeat characters.  So the several repeating newlines from the
+previous command are not found when using -s.
+
+tr -cs 'A-Za-z' '[\n*]' < assign2.html | sort
+This command gathers all words with only characters a-z and A-Z and sorts them
+into a list which includes repeated words
+
+tr -cs 'A-Za-z' '[\n*]' < assign2.html | sort -u
+This command gathers all words with only characters a-z and A-Z and sorts them
+into a list that does not include repeat words
+
+tr -cs 'A-Za-z' '[\n*]' < assign2.html | sort -u | comm - words
+The added comm command takes the sorted list of words from assign2.html 
+(created with tr and sort) and compares it with the large sorted list of words
+from the words file.  This print 3 columns, the first contains words only 
+present in assign2.html, the second column prints words only present in words,
+and the third column prints any words the two files both contain.  Because of 
+the size of the words file, the output is hard to read because it mostly only 
+contains words from the words file.
+
+tr -cs 'A-Za-z' '[\n*]' <assign2.html | sort -u | comm -23 - words
+The change -23 to the comm command modifies the comparison of assign2.html and
+words.  It removes the second and third output columns so only the first output
+column remains.  The first output column shows words present only in 
+assign2.html.
+
+Next we have to create a copy of the webpage of English and Hawaiian words with
+the following command.
+wget http://mauimapp.com/moolelo/hwnwdseng.htm
+this creates a copy of the page and saves it as hwnwdseng.htm
+
+next I wrote a script to extract the hawaiin words from this page and sort them
+into a table to be used as a spell checker for hawaiian words.
+The following is my script
+
+#!/bin/bash
+
+# 
+removes html stuff before the table
+
+sed '/<!DOCTYPE/,/<\/font><\/td>/ s/.*//' |
+
+
+# removes html stuff after the table
+
+sed '/<\/table>/,/<\/html>/ s/.*//' |
+
+
+# remove english words
+
+sed '/<tr>/,/<\/td>/ s/.*//' |
+
+
+# translate all upper case letters to lower case
+
+tr 'A-Z' 'a-z' |
+
+# delete commas
+sed 's/\,//g' |
+
+
+# replace ` with '
+
+sed s/\`/\'/g |
+
+
+# delete html stuff
+
+sed 's/<[^>]*>//g' |
+
+
+# replace space with new line to seperate words on same line
+
+sed 's/ /\n/g' |
+
+
+# removes misspelled haiwaiian
+
+tr -cs "pk\'mnwlhaeiou" '[\n*]' |
+
+
+# sorts haiwaiin words dictionary and removes duplicates
+
+sort -u |
+
+
+# remove empty lines
+
+sed '/^$/d'
+
+there is one bug in this script when its comes to removing haiwaiian that is 
+misspelled. It actually only removes the incorrect characters rather than 
+removing the entire word so that is a problem. 
+
+give the script execute privileges with
+chmod +x buildwords
+
+create the hawaiian dictionary with the command
+cat hwnwdseng.htm | ./buildwords > hwords
+
+create a file of misspelled english words with this command
+cat assign2.html | tr -cs 'A-Za-z' '[\n*]' | tr 'A-Z' 'a-z' | sort -u |
+ comm -23 - words > English_Misspelled
+
+wc -w
+there are 33 misspelled english words
+
+create a file of misspelled hawaiian words with this command
+cat assign2.html | tr -cs 'pk\'mnwlhaeiou' '[\n*]' | tr 'A-Z' 'a-z' | sort -u | 
+comm -23 - hwords > Hawaiian_Misspelled
+
+wc -w 
+there are 212 misspelled hawaiian words
+The spec was unclear so I only checked words with hawaiian letters that were
+misspelled rather that all words, otherwise the number of misspelled hawaiian
+words would be much larger and obviously any words with non-hawaiian letters 
+(of which there are a lot) would automaticaly be spelled wrong.
+
+to get words misspelled only in English 
+comm -23 English_Misspelled Hawaiian_Misspelled
+examples:
+halau
+lau
+wiki
+
+for this command I chose misspelled English words that only had hawaiian 
+characters, otherwise it would include words that my hawaiian spell check did 
+not look for.  
+
+words misspelled only in Hawaiian
+comm -13 English_Misspelled Hawaiian_Misspelled
+examples:
+men
+names
+will
+who
+ample
+this list includes most of the words in the page
+because the page is originally in english.
+
+worlds misspelled in both languages
+comm -12 English_Misspelled Hawaiian_Misspelled
+okina
+www

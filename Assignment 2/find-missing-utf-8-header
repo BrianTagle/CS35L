@@ -1,0 +1,27 @@
+#!/bin/bash
+#iterate through any number of arguements(files and directories only)
+for ARG in "$@" 
+do
+    if [[ -d $ARG ]]; then #ARG is a directory
+	#go through the list of files
+	OIFS="$IFS"
+	IFS=$'\n'
+	find $ARG -type f -print0 | while IFS= read -r -d '' FILE; 
+	do
+	    #contains non-ASCII bytes so the file must be in UTF-8
+            if grep -q -- [$'\x80'-$'\xFF'] "$FILE"; then 
+	       	if head -n 1 "$FILE" | grep -qxv -- "\-\*\- coding: utf-8 \-\*\-"; then
+		    echo "$FILE is missing the utf-8 header"
+		fi
+	    fi
+	done
+	IFS="$OIFS"
+    elif [[ -f $ARG ]]; then #ARG is a file
+	#contains non-ASCII bytes so the file must be in UTF-8
+	if grep -q -- [$'\x80'-$'\xFF'] "$ARG"; then 
+	    if head -n 1 "$ARG" | grep -qxv -- "\-\*\- coding: utf-8 \-\*\-"; then
+		echo "$ARG is missing the utf-8 header"
+	    fi
+	fi
+    fi
+done

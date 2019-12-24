@@ -1,0 +1,86 @@
+Exercise 1.1
+2. C-s H T M L Enter
+3. C-s s c a v e n g e r Enter M-b
+4. C-s s e l f - r e f e r e n t i a l Enter M-b M-b
+5. C-s a r r o w Enter M-b
+6. C-e
+7. C-a
+8. Yes, you can use emacs keybinds like C-s to search for words and phrases.
+10. C-x C-c
+
+Exercise 1.2
+2. M-g M-g 1 8 Enter C-u C-k Enter
+3. C-s D E C-a C-k C-k
+4. C-s # c C-s C-a C-p C-k C-k C-k C-k C-k C-k
+5. C-s < ! C-b C-b C-u 7 C-d C-n C-a C-u C-k C-s < ! C-a C-k C-k
+
+Exercise 1.3
+2. C-s A s s i g n m e n t SP 1 M-% A s s i g n m e n t SP 4 2 Enter y y Enter
+3. M-< C-s U T F - 8 M-& U T F - A S C I I Enter y Enter
+4. C-M-s [ ^ [ : a s c i i : ] ] Enter C-a C-k C-k
+5. C-s < / o l > Enter Enter
+6. C-x C-s C-x C-c
+
+Exercise 1.4
+3. C-s < ! C-s C-b C-b C-@ C-e M-w M-g M-g 1 8 Enter C-y Enter
+
+4. C-s < ! - - D C-a C-f C-@ C-n C-n C-e M-w C-r H o m C-r C-n C-n C-y Enter
+   C-s l e a r n SP C-a C-f C-@ C-e M-w C-r S u C-r C-p C-y Enter C-p DEL C-p DEL
+   C-s < ! - - - M-b M-f C-@ M-f C-b C-b C-b C-b M-w C-r s h o C-r M-f M-f M-f C-y
+   C-s m a y C-p C-a C-f C-@ C-n C-n C-n C-e M-w C-r n o C-n C-y Enter C-p DEL C-p DEL C-p DEL
+   C-s e n d SP C-a C-f C-@ C-e M-w C-r / h t C-r C-r C-e Enter C-y
+
+5. M-> C-@ C-r - - - C-r C-r Enter C-w
+6. C-y
+7. < ! - - Enter M-% - - > Enter - - > < ! - - Enter y y y y y y -->
+8. M-< M-% < o l > Enter < o L > Enter y y y y y y y
+   7 instances of ol replaced with oL.
+
+Exercise 1.5
+1. M-x m k d i r Enter j u n k Enter
+2. M-x c d Enter j u n k Enter 
+   Copy the file from assignment page
+   C-x C-s
+3. M-x compile Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace
+   g c c SP - o SP h e l l o SP h e l l o . c Enter
+4. M-x c o m p i l e Enter
+   Down . / h e l l o Enter
+   C-x 0 Enter
+   C-x C-w h e l l o - o u t Enter 
+5. C-x i ~/key1.txt Enter 
+   C-x C-w ~/key1.txt Enter
+
+-*- mode: compilation; default-directory: "~/junk/" -*-
+Compilation started at Fri Jan 11 12:50:28
+
+./hello
+#include <stdio.h>
+int
+main (void)
+{
+  char n = '\n', b = '\\', q = '"';
+  char const *p = "#include <stdio.h>%cint%cmain (void)%c{%c  char n = '%cn', b = '%c%c', q = '%c';%c  char const *p = %c%s%c;%c  printf (p, n, n, n, n, b, b, b, q, n, q, p, q, n, n, n, n);%c  return 0;%c}%c";
+  printf (p, n, n, n, n, b, b, b, q, n, q, p, q, n, n, n, n);
+  return 0;
+}
+
+Compilation finished at Fri Jan 11 12:50:28
+
+Exercsise 1.6
+1. C-x b
+2. ( r a n d o m " 6 0 4 - 9 0 7 - 0 7 6 " ) C-j
+   11550046790860948
+3. ( s e t q SP x SP ( r a n d o m ) )
+   ( s e t q SP y SP ( r a n d o m ) )
+4. ( * SP x SP y)
+   the result I recieved was not correct mathematically because the size the answer to the multiplication was outside the range of possible representation, causing an overflow.
+5. M - : ( * SP x SP y )
+   I got the same result from this command as I did with the multiplication in the previous answer.
+6. The "random" numbers generated in emacs are generated using some human defined algorithim which means that the "random" numbers are 
+   actually following some set of rules so they are psuedo-random.
+7. An incorrect answer will appear when there is an overflow when calculating the multiplcated.  Assume that the range of values for random is INT_MIN to INT_MAX.
+   There are 2^n * 45 possibilites of two random numbers that will not overflow a 64 bit integer.  This is calculated with the formula 2^n * (1 + 1 + 1/2 + 1/3 + 1/4 + 1/n) because
+   there are 2^n integers that wont overflow when multiplied by 0, 2^n when multiplied by 1, .5 * 2^n when multiplied by 2 and so on.  Then we do the following equation 
+   for the final answer:
+   2^n * 45 / 2^2n is 2.43x10^-18 which leaves uswith a 99.9 repeating % of a combination which does overflow so the chance of not overflowing is incredibly small.  
+ 

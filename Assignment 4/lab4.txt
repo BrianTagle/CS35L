@@ -1,0 +1,198 @@
+1) Download the version of coreutils ls that we will be looking at in this lab
+
+`wget https://web.cs.ucla.edu/classes/winter19/cs35L/assign/coreutils-with-bug.
+tar.gz`
+
+This downloads the compressed tarball of the ls program that we will need to
+unzip.
+
+`tar -xzvf coreutils-with-bug.tar.gz`
+
+This will unzip the contents of the tar file and put it into a directory named
+coreutils-with-bug.
+
+2) Build this version of coreutils.
+Navigate to its directory 
+`cd coreutils-with-bug`
+`./configure --prefix='/u/eng/ugrad/tagle/CS35L/assign4/coreutils'`
+`make`
+
+There is an error when we run the make command:
+In file included from utimecmp.c:41:
+utimens.h:2:5: error: conflicting types for 'futimens'
+ int futimens (int, char const *, struct timespec const [2]);
+     ^~~~~~~~
+In file included from utimecmp.h:25,
+                 from utimecmp.c:25:
+/usr/include/sys/stat.h:373:12: note: previous declaration of 'futimens' was 
+here 
+extern int futimens (int __fd, const struct timespec __times[2]) __THROW;
+           ^~~~~~~~
+We can see from this error that the function futimens was defined twice and they
+take different arguements.
+
+3)Fix the error with the patch file.
+We need to download the patch from the assignment patch and apply it.
+`wget https://web.cs.ucla.edu/classes/winter19/cs35L/assign/coreutils.diff`
+
+In the diff file the names of the files it is changing have a ~ character after
+their name.  Since we have a fresh version of coreutils our files do not have 
+this ~ so we need to edit the diff file to remove the ~ after all filenames.
+
+I used emacs and the find and replace command (M-%) to find the ~ characters
+and replace the ones after filenames with a blank space.
+
+After that we can safely patch the file while in the coreutils-with-bug 
+directory
+`patch -p0 < coreutils.diff`
+
+By looking at the diff file we can see what it did to fix the error.  The diff 
+file renamed the instance of futimens with 3 arguements to coreutils_futimens.
+
+4) Build coreutils again now that the error has been fixed
+`make CFLAGS='-g -O0'`
+(-O0 will be useful later to debug error in ls program)
+`make install`
+
+now coreutis-with-bug is installed in coreutils
+
+5)Reproduce the bug by using the provided commands from the assignment page
+                                                                  
+tmp=$(mktemp -d)
+cd $tmp
+touch -d '1918-11-11 11:00 GMT' wwi-armistice
+touch now
+sleep 1
+touch now1
+TZ=UTC0 ~/CS35L/assign4/coreutils/bin/ls -lt --full-time wwi-armistice now now1
+
+The output of this script is
+-rw-r--r-- 1 tagle engugrad 0 1918-11-11 11:00:00.000000000 +0000 wwi-armistice
+-rw-r--r-- 1 tagle engugrad 0 2019-02-04 19:10:23.284628393 +0000 now1
+-rw-r--r-- 1 tagle engugrad 0 2019-02-04 19:10:22.281611107 +0000 now
+The bug still exists because the oldest file is output first. (the now and now1
+files were created very closely because I originally used a script to recreate
+the bug but found it was not needed)
+
+6) open up ls with the gdb debugger to find the problem
+`gdb ~/CS35L/assign4/coreutils/bin/ls`
+(gdb) info functions 
+under ls.c I find the function sort_files which clearly has some role in the
+ordering of the functions and may be part of the problem with sorting in 
+relation to time. So I put a breakpoint there so I look at the function during
+runtime
+(gdb) b sort_files
+
+I navigate to the function to look at the code
+(gdb) list sort_files
+Now I can see some of the function but I need to navigate further into this
+functions code, so I use the the command
+(gdb) list [line number] 
+until I find anything relevant to sorting with regard to time.
+
+Around line number 2977 I discover where this function sorts in regard to time
+2974                case time_mtime:
+2975                  func = sort_reverse ? rev_cmp_mtime : compare_mtime;
+2976                  break;
+This is the portion of the code that deals with mtime, with other adjacent
+code that deal with ctime and atime. I put a breakpoint at compare_mtime
+(gdb) b compare_mtime
+
+compare_mtime is the function used when ls is given the options -lt
+this compare_mtime call leads to another function
+46      timespec_cmp (struct timespec a, struct timespec b)
+which is in a library included in the ls program
+
+the timespec_cmp functions is most likely the source of the problem because it
+contains the code:
+48        int diff = a.tv_sec - b.tv_sec;
+so when one time number is very large, like when files have time stamps very far
+in the past there could be an integer overflow which could result in a misordering.
+
+run the program the progam in gdb
+(gdb) r -lt --full-time wwi-armistice now now1
+
+I navigate the program with 
+(gdb) s
+and 
+(gdb) list locals
+These commands allow me to step through the program and view the value of local
+variables
+On the first iteration, the diff variable in the timespec_cmp has a value of 1,
+however in the second iteration, diff = -1131620846, so like I suspected, this
+value is overflowing and causing incorrect sorting in regards to time.
+
+To avoid integer overflow we will need to make a change to avoid subtraction in
+the timespec_cmp function in the file timespec.h 
+
+7) Fix the bug and make a changelog with diff file
+This file is in the original directory coreutils-with-bug under the lib
+subdirectory 
+`cd ~/CS35L/assign4/coreutils-with-bug/lib/`
+`emacs timespec.h`
+
+I change the contents of the timespec_cmp function to 
+  return a.tv_sec > b.tv_sec ? 1 : a.tv_sec < b.tv_sec ? -1 :
+    a.tv_nsec -b.tv_nsec;
+this way the two times can be compared without subtract and thus avoiding 
+integer overflow problems
+
+to create the patchfile, use the following command in the coreutils-with-bug
+directory:
+`diff -u lib/timespec.h~ lib/timespec.h > patchls.diff`
+
+timespec.h~ is the old version of timespec and timespec.h contains the changes
+to the timespec_cmp functions
+
+create a changelog by opening timespech.h and using the keystrokes:
+C-x 4 a
+The changelog is as follows:
+2019-02-07  Brian Patrick Tagle  <tagle@lnxsrv09.seas.ucla.edu>
+
+	* timespec.h: replaced integer subtraction in the timespec_cmp
+	function with direct comparison with > and <.  If the seconds are equal
+	then the nanoseconds are compared (this comparison still has the 
+	possibility of overflow).
+
+I copy this changelog and the contents of the diff file into a new file, 
+lab4.diff
+
+I also remove the ~ from any filenames in this diff file.  This ensures that the
+patch will apply to the correct files when it is applied.
+
+Now I can apply the patch with:
+`patch -p0 < lab4.diff`
+`make`
+
+8) Test the patch
+testing the patch we run the same commands we used to reproduce the bug but run
+the ls command from the coreutils-with-bug directory instead because that is 
+where we applied the patch
+tmp=$(mktemp -d)
+cd $tmp
+touch -d '1918-11-11 11:00 GMT' wwi-armistice
+touch now
+sleep 1
+touch now1
+TZ=UTC0 ~/CS35L/assign4/coreutils-with-bug/src/ls -lt --full-time 
+	wwi-armistice now now1
+-rw-r--r-- 1 tagle engugrad 0 2019-02-07 19:38:46.997813801 +0000 now1
+-rw-r--r-- 1 tagle engugrad 0 2019-02-07 19:38:42.838742394 +0000 now
+-rw-r--r-- 1 tagle engugrad 0 1918-11-11 11:00:00.000000000 +0000 wwi-armistice
+
+It looks like the patch worked! The files are now in their proper order
+
+9) Reproduce the bug in my home direcoty on the SEASnet linux server
+When I run the given commands in my home directory I get:
+-rw-r--r-- 1 tagle engugrad 0 2054-12-17 17:28:16.000000000 +0000 wwi-armistice
+-rw-r--r-- 1 tagle engugrad 0 2019-02-07 07:02:42.184937000 +0000 now1
+-rw-r--r-- 1 tagle engugrad 0 2019-02-07 07:02:39.807463000 +0000 now
+
+This output is clearly wrong because it says the 1918 file is actually from the
+future.  Testing other older files the ls command gives several erroneous dates.
+
+SEASnet has problems handling these files because the timestamps are stored as
+32-bit unsigned integers with the "start of time" beginning on Jan 1st 1970 
+00:00:00.  Any files before this this time have negative timestamps but since
+they are stored as unsigned, the program is not able to give the accurate 
+timestamps and instead lists them as being far in the future.

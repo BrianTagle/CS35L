@@ -1,0 +1,20 @@
+Top Left Window:
+List of all commits along with a graphic that shows different branches.
+
+Top Middle Window:
+Lists the person who made the commit on that line.
+
+Top Right Window:
+Lists the date that the commit on that line was made.
+
+Bottom Left Window: 
+Shows the comments left by the author of the changes for the selected commit which would also be reflected in the Changelog.
+Also shows the diff files which allows a viewer to see what changed with this commit.
+There are some GUI elements which allow you to word search to find a specific location.
+
+Bottom Right Window:
+List of the files that were changed in the commit.  
+Clicking on these files allows you to navigate to their relevant diff files for the commit in the bottom left window.
+
+There also some miscellaneous tools between the top and bottom windows that have some searching functionality to help
+users find a commit they are looking for.

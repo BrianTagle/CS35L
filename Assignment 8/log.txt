@@ -1,0 +1,32 @@
+Lab Partner: Jack Brewer
+
+My BeagleBone IP address: 10.97.85.103
+
+As a host:
+
+I created a user for my partner Jack on my BeagleBone
+$ sudo useradd -d /home/jack -m jack
+Then I added a password for him
+$ sudo passwd jack (this command prompted me to enter a password, I made the password "pwd"
+
+Next I had to make changes to the user to allow Jack to ssh into my BeagleBone
+Enter the directory for the user jack
+$ cd /home/jack
+make an ssh file and give it the correct permissions
+$ sudo mkdir .ssh
+$ sudo chown -R jack .ssh
+$ sudo chmod 700 .ssh
+
+my partner Jack performed the same steps on his BeagleBone to create a user named brian
+
+As a client:
+
+generate public/private keys
+$ ssh-keygen
+transfer the public key onto my user on my Jack's BeagleBone
+$ ssh-copy-id -i brian@10.97.85.102
+$ ssh-agent
+$ ssh-add (adds the private key to ssh-agent)
+$ ssh brian@10.97.85.102
+These commands are succesful and I am able to ssh into my directory on Jack's BeagleBone without using a password
+There is a lot of lag but I am able to run some commands like make text files in this directory.
